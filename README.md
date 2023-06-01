@@ -1,6 +1,7 @@
 # location-app
 
 > A Vue.js project that is create by using Google Maps API and is a simple web application to acquire locations and show local time by location time zone.
+<img width="1440" alt="location-app" src="https://github.com/JJJackie13/Location-App/assets/87925464/f4158a12-2b1b-40b0-bb18-ada46948ae02">
 
 ## Build Setup
 
