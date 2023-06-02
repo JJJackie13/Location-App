@@ -104,17 +104,12 @@ export default {
       if (!place.geometry) {
         this.getAddressByInput()
       } else {
-        this.getAddressFrom(
-          place.geometry.location.lat(), place.geometry.location.lng()
-        )
-        this.showUserLocationOnTheMap(
-          place.geometry.location.lat(), place.geometry.location.lng()
-        )
+        this.getAddressFrom(place.geometry.location.lat(), place.geometry.location.lng())
       }
     })
   },
 
-  methods: {
+  methods: {  
     locatedButtonPressed () {
       this.spinner = true
       if (navigator.geolocation) {
@@ -122,8 +117,6 @@ export default {
         navigator.geolocation.getCurrentPosition(
           position => {
             this.getAddressFrom(position.coords.latitude, position.coords.longitude)
-
-            this.showUserLocationOnTheMap(position.coords.latitude, position.coords.longitude)
           },
           error => {
             this.error = "Unable to find your location, please type your address."
@@ -149,7 +142,7 @@ export default {
             this.error = response.data.error_message
             console.log(response.data.error_message)
           } else {
-            const results = response.data.results
+            const results = response.data.results[0]
             this.address = results.formatted_address
 
             if (this.locationList.length === 0) {
@@ -172,14 +165,14 @@ export default {
             }
           }
           this.searchSpinner = false
-
+          this.showUserLocationOnTheMap(response.data.results[0].geometry.location.lat, response.data.results[0].geometry.location.lng)
           axios.get('http://api.timezonedb.com/v2.1/get-time-zone', {
             params: {
               key: process.env.VUE_APP_TIMEZONEDB_API_KEY,
               format: 'json',
               by: 'position',
-              lat: rresults.geometry.location.lat,
-              lng: results.geometry.location.lng,
+              lat: response.data.results[0].geometry.location.lat,
+              lng: response.data.results[0].geometry.location.lng,
             },
           })
             .then(response => {
@@ -235,6 +228,7 @@ export default {
               }
             }
             this.spinner = false
+            this.showUserLocationOnTheMap(response.data.results[0].geometry.location.lat, response.data.results[0].geometry.location.lng)
             // Fetch time zone and local time
             axios.get('http://api.timezonedb.com/v2.1/get-time-zone', {
               params: {
@@ -269,7 +263,7 @@ export default {
         center: new google.maps.LatLng(lat, long),
         mapTypeId: google.maps.MapTypeId.ROADMAP
       })
-      
+
       this.locationList.forEach((locationListItem) => {
         const position = new google.maps.LatLng(locationListItem.lat, locationListItem.lng)
         const googleMarker = new google.maps.Marker({
@@ -277,7 +271,25 @@ export default {
           map,
           title: locationListItem.address,
         })
-        
+
+        this.mapMarkers.push(googleMarker)
+      })
+    },
+
+    deleteMarker (lat, lng) {
+      let map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 15,
+        center: new google.maps.LatLng(lat, lng),
+        mapTypeId: google.maps.MapTypeId.ROADMAP
+      })
+      this.locationList.forEach((locationListItem) => {
+        const position = new google.maps.LatLng(locationListItem.lat, locationListItem.lng)
+        const googleMarker = new google.maps.Marker({
+          position,
+          map,
+          title: locationListItem.address,
+        })
+
         this.mapMarkers.push(googleMarker)
       })
     },
@@ -300,28 +312,25 @@ export default {
       }
     },
 
-    handleDeleteSearchHistory() {
+    handleDeleteSearchHistory () {
       if (this.checkedItems.length > 0) {
-        this.locationList = this.locationList.filter((item) => {
-          const shouldKeep = !this.checkedItems.includes(item.id);
-
-          // Remove the corresponding marker from the map
-          if (!shouldKeep) {
-            const marker = this.mapMarkers.find((m) => m.id === item.id);
-            if (marker) {
-              marker.setMap(null);
-            }
-          }
-
-          return shouldKeep;
-        });
-
-        this.selectAllChecked = false;
+        const deleteAll = this.locationList.length === this.checkedItems.length
+        const lat = deleteAll ? 43.6580439 : this.locationList[this.locationList.length - 1].lat
+        const lng = deleteAll ? -79.3828885 : this.locationList[this.locationList.length - 1].lng
+        this.locationList = this.locationList.filter(item => !this.checkedItems.includes(item.id))
+        this.selectAllChecked = false
+        if (deleteAll) {
+          this.deleteMarker(lat, lng)
+          this.address = ""
+          this.showTimer = false
+          this.timeZone = ""
+        } else {
+          this.deleteMarker()
+        }
       }
-
-      if (this.locationList.length === 0) {
+      if (this.locationList.length === 0){
         this.showSearchHistoryModal = false;
-        this.checkedItems = [];
+        this.checkedItems = []
       }
     },
         
